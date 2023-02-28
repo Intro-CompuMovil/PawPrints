@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Menu">
+
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="120dp"
+        android:layout_height="match_parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:background="@color/Menu_brown"
+        android:id="@+id/menu_left"
+    >
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/men_principal"
+            android:id="@+id/menu_title"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            android:textStyle="italic"
+            android:textAlignment="center"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintVertical_bias="0.03"
+            />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/opt1"
+            app:layout_constraintTop_toBottomOf="@+id/menu_title"
+            app:layout_constraintBottom_toTopOf="@+id/button_gomap"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            android:text="@string/rutas"
+            android:textAlignment="center"
+            android:paddingTop="5dp"
+            android:textColor="@color/Menu_option"
+        />
+        <Button
+            android:layout_width="116dp"
+            android:layout_height="48dp"
+            android:id="@+id/button_gomap"
+            android:backgroundTint="@color/Menu_brown"
+            android:text="@string/arrow"
+            android:textColor="@color/Arrow"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/opt1"
+
+            />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/opt2"
+            app:layout_constraintTop_toBottomOf="@+id/button_gomap"
+            app:layout_constraintBottom_toTopOf="@+id/button_go_profile"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            android:text="@string/perfil"
+            android:textAlignment="center"
+            android:paddingTop="5dp"
+            android:textColor="@color/Menu_option"
+            />
+        <Button
+            android:layout_width="116dp"
+            android:layout_height="48dp"
+            android:id="@+id/button_go_profile"
+            android:backgroundTint="@color/Menu_brown"
+            android:text="@string/arrow"
+            android:textColor="@color/Arrow"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/opt2"
+
+            />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/opt3"
+            app:layout_constraintTop_toBottomOf="@+id/button_go_profile"
+            app:layout_constraintBottom_toTopOf="@+id/button_gocom"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            android:text="@string/comunidades"
+            android:textAlignment="center"
+            android:paddingTop="5dp"
+            android:textColor="@color/Menu_option"
+            />
+        <Button
+            android:layout_width="116dp"
+            android:layout_height="48dp"
+            android:id="@+id/button_gocom"
+            android:backgroundTint="@color/Menu_brown"
+            android:text="@string/arrow"
+            android:textColor="@color/Arrow"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/opt3"
+
+            />
+
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toRightOf="@+id/menu_left"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintVertical_bias="0.05"
+        android:text="@string/headingmenu"
+        android:textColor="@color/Main_brown"
+        android:textSize="25sp"
+
+        />
+
+    <ImageView
+        android:layout_width="50dp"
+        android:id="@+id/prof1"
+        android:layout_height="50dp"
+        app:layout_constraintLeft_toRightOf="@+id/menu_left"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:src="@raw/prof"
+        app:layout_constraintVertical_bias="0.15"
+        app:layout_constraintHorizontal_bias="0.2"
+        />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/prof1"
+        app:layout_constraintLeft_toRightOf="@id/menu_left"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintVertical_bias="0.02"
+        app:layout_constraintHorizontal_bias="0.2"
+        android:text="@string/perfil_1"
+        android:textColor="@color/Menu_brown"
+        android:textAlignment="center"
+
+        />
+
+    <ImageView
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:id="@+id/prof2"
+        app:layout_constraintLeft_toRightOf="@+id/prof1"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:src="@raw/prof"
+        app:layout_constraintVertical_bias="0.15"
+        app:layout_constraintHorizontal_bias="0.15"
+        />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/prof2"
+        app:layout_constraintLeft_toRightOf="@id/menu_left"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintVertical_bias="0.02"
+        app:layout_constraintHorizontal_bias="0.48"
+        android:text="@string/perfil_2"
+        android:textColor="@color/Menu_brown"
+        android:textAlignment="center"
+
+        />
+
+    <ImageView
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:id="@+id/prof3"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:src="@raw/prof"
+        app:layout_constraintVertical_bias="0.15"
+        app:layout_constraintLeft_toRightOf="@+id/prof2"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintHorizontal_bias="0.3"
+        />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/prof3"
+        app:layout_constraintLeft_toRightOf="@id/menu_left"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintVertical_bias="0.02"
+        app:layout_constraintHorizontal_bias="0.78"
+        android:text="@string/perfil_3"
+        android:textColor="@color/Menu_brown"
+        android:textAlignment="center"
+
+        />
+
+    <ImageView
+        android:layout_width="250dp"
+        android:layout_height="280dp"
+        android:id="@+id/videolayout"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toRightOf="@id/menu_left"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintVertical_bias="0.58"
+        android:src="@raw/video"
+        />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

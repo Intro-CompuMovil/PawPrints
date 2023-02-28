@@ -1,0 +1,29 @@
+<resources>
+    <string name="app_name">PawPrints</string>
+    <string name="password">Password</string>
+    <string name="user">User</string>
+    <string name="log_in">Log in</string>
+    <string name="inicio_de_sesi_n">Inicio de sesión</string>
+    <string name="registrarse">Registrarse</string>
+    <string name="men_principal">Menú principal</string>
+    <string name="arrow"><![CDATA[->]]></string>
+    <string name="rutas">Rutas</string>
+    <string name="perfil">Perfil</string>
+    <string name="comunidades">Comunidades</string>
+    <string name="headingmenu">Menú principal</string>
+    <string name="perfil_1">Perfil 1</string>
+    <string name="perfil_2">Perfil 2</string>
+    <string name="perfil_3">Perfil 3</string>
+    <string name="nombre">Nombre</string>
+    <string name="nombre_del_due_o">Nombre del Dueño</string>
+    <string name="registrate">¡Registrate!</string>
+    <string name="fecha_de_nacimiento">Fecha de nacimiento</string>
+    <string name="raza">Raza</string>
+    <string name="registrarsebutton">Registrarse</string>
+    <string name="regresar">Regresar</string>
+    <string name="nombre_de_la_comunidad">Nombre de la comunidad</string>
+    <string name="razaShow">Raza</string>
+    <string name="opciones_de_ubicaci_n">Opciones de ubicación</string>
+    <string name="ub_ca_las_cl_nicas_y_tiendas_mas_cercanas">Ubíca las clínicas y tiendas mas cercanas</string>
+    <string name="tu_informaci_n_personal">Tu información personal</string>
+</resources>
