@@ -97,6 +97,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:id="@+id/fechaNac"
         android:text="@string/fecha_de_nacimiento"
         app:layout_constraintTop_toBottomOf="@+id/raza"
         app:layout_constraintRight_toRightOf="parent"
@@ -122,5 +123,19 @@
         android:text="@string/registrarsebutton"
 
         />
+
+    <Button
+        android:id="@+id/cambiarFoto"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:backgroundTint="@color/Main_brown"
+        android:text="Cambiar foto"
+        android:textColor="@color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintHorizontal_bias="0.375"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toLeftOf="@id/fechaNac"
+        app:layout_constraintTop_toTopOf="@id/profilePicReg"
+        app:layout_constraintVertical_bias="0.174" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

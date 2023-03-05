@@ -26,4 +26,5 @@
     <string name="opciones_de_ubicaci_n">Opciones de ubicación</string>
     <string name="ub_ca_las_cl_nicas_y_tiendas_mas_cercanas">Ubíca las clínicas y tiendas mas cercanas</string>
     <string name="tu_informaci_n_personal">Tu información personal</string>
+    <string name="necesidad_permiso">Es necesasrio activar este permiso para acceder a la funcionalidad completa de la app</string>
 </resources>
