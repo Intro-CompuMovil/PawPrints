@@ -56,4 +56,12 @@
         app:layout_constraintLeft_toLeftOf="parent"
         />
 
+    <Button
+        android:id="@+id/buttonPart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/Participantes"
+        tools:layout_editor_absoluteX="7dp"
+        tools:layout_editor_absoluteY="507dp" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -45,6 +45,7 @@ class MainActivity : AppCompatActivity() {
         const val GALLERY_REQUEST = 0
         const val CAMERA_REQUEST = 1
         const val PICK_IMAGE = 8
+        const val CONTACTS_REQUEST =0
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

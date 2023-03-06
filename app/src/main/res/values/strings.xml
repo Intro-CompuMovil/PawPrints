@@ -27,4 +27,6 @@
     <string name="ub_ca_las_cl_nicas_y_tiendas_mas_cercanas">Ubíca las clínicas y tiendas mas cercanas</string>
     <string name="tu_informaci_n_personal">Tu información personal</string>
     <string name="necesidad_permiso">Es necesasrio activar este permiso para acceder a la funcionalidad completa de la app</string>
+    <string name="Participantes">Participantes</string>
+    <string name="AnadirParticipante">Añadir participante</string>
 </resources>
