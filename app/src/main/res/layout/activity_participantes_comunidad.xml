@@ -7,7 +7,7 @@
     tools:context=".participantesComunidad">
 
     <Button
-        android:id="@+id/buttonAnadirPart"
+        android:id="@+id/buttonAnadirP"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/AnadirParticipante"
