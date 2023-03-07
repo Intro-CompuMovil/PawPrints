@@ -6,17 +6,6 @@
     android:layout_height="match_parent"
     tools:context=".participantesComunidad">
 
-    <TextView
-        android:id="@+id/textView"
-        android:layout_width="287dp"
-        android:layout_height="511dp"
-        android:text="Aqu[i apareceran los contactos"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.25" />
-
     <Button
         android:id="@+id/buttonAnadirPart"
         android:layout_width="wrap_content"
@@ -28,5 +17,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.866" />
+
+    <ListView
+        android:layout_width="410dp"
+        android:layout_height="440dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.209"
+        android:id="@+id/Lista"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

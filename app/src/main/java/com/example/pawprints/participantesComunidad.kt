@@ -48,7 +48,9 @@ class participantesComunidad : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_participantes_comunidad)
 
-        val mProjection = arrayOf(ContactsContract.Profile._ID,ContactsContract.Profile.DISPLAY_NAME_PRIMARY )
+        mlista = findViewById(R.id.Lista)
+
+        val mProjection = arrayOf(ContactsContract.Profile._ID,ContactsContract.Profile.DISPLAY_NAME_PRIMARY)
 
         mContactsAdapter = ContactsAdapter(this,null,0)
         mlista?.adapter = mContactsAdapter
