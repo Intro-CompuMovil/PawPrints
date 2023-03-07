@@ -41,6 +41,8 @@ class participantesComunidad : AppCompatActivity() {
         }
     }
 
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
 
         val BotonAPart = findViewById<Button>(R.id.buttonPart)
@@ -48,13 +50,18 @@ class participantesComunidad : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_participantes_comunidad)
 
-        mlista = findViewById(R.id.Lista)
+        BotonAPart.setOnClickListener {
+            requestContacsPermicion()
 
-        val mProjection = arrayOf(ContactsContract.Profile._ID,ContactsContract.Profile.DISPLAY_NAME_PRIMARY)
+            mlista = findViewById(R.id.Lista)
 
-        mContactsAdapter = ContactsAdapter(this,null,0)
-        mlista?.adapter = mContactsAdapter
-        initView()
+            val mProjection = arrayOf(ContactsContract.Profile._ID,ContactsContract.Profile.DISPLAY_NAME_PRIMARY)
+
+            mContactsAdapter = ContactsAdapter(this,null,0)
+            mlista?.adapter = mContactsAdapter
+            initView()
+
+        }
 
 
     }
