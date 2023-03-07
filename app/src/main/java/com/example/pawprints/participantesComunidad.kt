@@ -45,7 +45,7 @@ class participantesComunidad : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
-        val BotonAPart = findViewById<Button>(R.id.buttonPart)
+        val BotonAPart = findViewById<Button>(R.id.buttonAnadirPart)
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_participantes_comunidad)
