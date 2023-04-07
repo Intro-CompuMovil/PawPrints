@@ -46,6 +46,8 @@ class MainActivity : AppCompatActivity() {
         const val CAMERA_REQUEST = 1
         const val PICK_IMAGE = 8
         const val CONTACTS_REQUEST =0
+        const val ACCESS_FINE_LOCATION = 1
+        const val ACCESS_COARSE_LOCATION = 2
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

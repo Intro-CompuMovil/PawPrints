@@ -72,14 +72,19 @@ class Register : AppCompatActivity() {
         }
     }
 
-    private fun showInContextUI(){
+    private fun showInContextUI() : Boolean{
+        var acepto = false
         val builder = AlertDialog.Builder(this)
         builder.setTitle("Permiso necesario")
         builder.setMessage("Esta función requiere acceso. Si deniegas el permiso, algunas funciones estarán deshabilitadas.")
+        builder.setPositiveButton("Aceptar") { dialog, which ->
+            acepto = true
+        }
         builder.setNegativeButton("Volver") { dialog, which ->
             dialog.dismiss()
         }
         builder.show()
+        return acepto
     }
 
     private fun askImageMethod(){
@@ -109,8 +114,18 @@ class Register : AppCompatActivity() {
 
     private fun requestCameraPermission(){
         if (shouldShowRequestPermissionRationale(android.Manifest.permission.CAMERA)) {
-            showInContextUI()
-            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.CAMERA), CAMERA_REQUEST)
+            val acepto = showInContextUI()
+            if(acepto){
+                ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.CAMERA), CAMERA_REQUEST)
+                if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA)
+                    == PackageManager.PERMISSION_GRANTED) {
+                    startCamera()
+                }else{
+                    return
+                }
+            }else{
+                return
+            }
         }else{
             ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.CAMERA), CAMERA_REQUEST)
         }
