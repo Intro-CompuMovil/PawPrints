@@ -9,6 +9,7 @@ import android.widget.Toast
 
 
 class Communities : AppCompatActivity() {
+
     fun abrirParticipantes(){
         val intent = Intent(this,participantesComunidad::class.java)
         this.startActivity(intent)
@@ -24,6 +25,4 @@ class Communities : AppCompatActivity() {
             abrirParticipantes()
         }
     }
-
-
 }
