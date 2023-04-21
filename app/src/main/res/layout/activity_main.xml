@@ -26,6 +26,7 @@
         android:layout_width="300dp"
         android:layout_height="wrap_content"
         android:hint="@string/user"
+        android:inputType="textEmailAddress"
         android:textColor="@color/Main_brown"
         android:textColorHint="@color/Main_brown"
         app:layout_constraintBottom_toBottomOf="parent"
