@@ -10,11 +10,15 @@
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
-    <EditText android:id="@+id/texto"
-        android:layout_height="wrap_content"
+    <EditText
+        android:id="@+id/texto"
         android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:layout_margin="30dp"
+        android:background="@drawable/roundcorner"
         android:hint="Ingrese una direccion"
-        android:background="@drawable/roundcorner" />
+        android:imeOptions="actionSearch"
+        android:inputType="text" />
+
 
 </FrameLayout>

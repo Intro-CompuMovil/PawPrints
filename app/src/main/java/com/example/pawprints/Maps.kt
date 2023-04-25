@@ -1,30 +1,4 @@
 package com.example.pawprints
-/*
-import android.content.pm.ActivityInfo
-import android.content.Context
-import android.content.pm.PackageManager
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
-
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
-import com.example.pawprints.databinding.ActivityMapsBinding
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.MapStyleOptions
-import android.hardware.*
-import android.os.Looper
-import android.util.Log
-import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
-import androidx.core.app.ActivityCompat
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.*
-import com.example.pawprints.MainActivity.Companion.ACCESS_FINE_LOCATION*/
 
 import android.content.Context
 import android.content.pm.PackageManager
@@ -49,10 +23,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MapStyleOptions
-import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -61,7 +32,17 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
+import com.google.maps.DirectionsApi
+import com.google.maps.GeoApiContext
+import com.google.maps.model.DirectionsResult
+import com.google.maps.model.DirectionsRoute
+import com.google.android.gms.maps.model.Polyline
+import com.google.android.gms.maps.model.PolylineOptions
+import android.graphics.Color
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 
+import com.google.maps.model.LatLng as ApiLatLng
 
 class Maps : AppCompatActivity(), OnMapReadyCallback{
     private var mMap: GoogleMap? = null
@@ -76,39 +57,17 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
 
     private var longitud: Double? = null
     private var latitud: Double? = null
+    private var polyline: Polyline? = null
     private var currentZoomLevel: Float = 18F
     private var lastRecordedLocation: LatLng? = null
     private val distanceThreshold = 30.0
+    private var currentLocationMarker: Marker? = null
+    private val markersList = mutableListOf<MarkerOptions>()
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            ACCESS_FINE_LOCATION -> {
-                if((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)){
-                    //Aqui va el proceso pa sacar los datos
-                    Toast.makeText(this, "permission granted :)", Toast.LENGTH_LONG).show()
+    val BOGOTA_NORTH_EAST = LatLng(4.826389, -74.014305)
+    val BOGOTA_SOUTH_WEST = LatLng(4.469611, -74.217694)
+    val bogotaBounds = LatLngBounds(BOGOTA_SOUTH_WEST, BOGOTA_NORTH_EAST)
 
-                }else{
-                    Toast.makeText(this, "permission denied", Toast.LENGTH_LONG).show()
-                }
-                return
-            }
-            /*ACCESS_COARSE_LOCATION -> {
-                if((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)){
-                    //Aqui va el proceso pa sacar los datos
-                    Toast.makeText(this, "permission granted :)", Toast.LENGTH_LONG).show()
-                }else{
-                    Toast.makeText(this, "permission denied", Toast.LENGTH_LONG).show()
-                }
-                return
-            }*/
-        }
-
-    }
 
     private fun calculateDistanceInMeters(a: LatLng, b: LatLng): Double {
         val locationA = Location("pointA").apply {
@@ -144,49 +103,6 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
         }
     }
 
-    private fun checkLocationPermission() {
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            // Should we show an explanation?
-            if (ActivityCompat.shouldShowRequestPermissionRationale(
-                    this,
-                    android.Manifest.permission.ACCESS_FINE_LOCATION
-                ) /*|| ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_COARSE_LOCATION)
-            */) {
-                // Show an explanation to the user *asynchronously* -- don't block
-                // this thread waiting for the user's response! After the user
-                // sees the explanation, try again to request the permission.
-                AlertDialog.Builder(this)
-                    .setTitle("Location Permission Needed")
-                    .setMessage("This app needs the Location permission, please accept to use location functionality")
-                    .setPositiveButton(
-                        "OK"
-                    ) { _, _ ->
-                        //Prompt the user once explanation has been shown
-                        requestLocationPermission()
-                    }
-                    .create()
-                    .show()
-            } else {
-                // No explanation needed, we can request the permission.
-                requestLocationPermission()
-            }
-        }
-    }
-
-    private fun requestLocationPermission() {
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(
-                android.Manifest.permission.ACCESS_FINE_LOCATION,
-            ),
-            ACCESS_FINE_LOCATION
-        )
-    }
-
     private fun createLocationRequest(): LocationRequest {
         val locationRequest = LocationRequest.create().apply {
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
@@ -220,28 +136,23 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
 
 
     private fun updateLocationOnMap(latitude: Double, longitude: Double) {
-
-        mMap?.clear()
-
-        // Crea un nuevo marcador con la ubicación actualizada
         val currentLocation = LatLng(latitude, longitude)
-        mMap?.addMarker(
-            MarkerOptions()
-                .position(currentLocation)
-                .title("Ubicación actual")
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
-        )
-
-        // Mueve la cámara a la nueva ubicación
+        if (currentLocationMarker == null) {
+            currentLocationMarker = mMap?.addMarker(
+                MarkerOptions()
+                    .position(currentLocation)
+                    .title("Ubicación actual")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
+            )
+        } else {
+            currentLocationMarker?.position = currentLocation
+        }
+        polyline?.remove()
         mMap?.moveCamera(CameraUpdateFactory.newLatLng(currentLocation))
-
         currentZoomLevel = mMap?.cameraPosition?.zoom ?: currentZoomLevel
-
-
-        // Anima la cámara al nivel de zoom guardado
         mMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, currentZoomLevel))
-
     }
+
 
     private fun setMapStyleBasedOnLightLevel(lightLevel: Float) {
         val styleId = if (lightLevel < 1000) {
@@ -252,6 +163,8 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
         mMap?.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, styleId))
     }
 
+
+
     private fun searchAddress(address: String) {
         val geocoder = Geocoder(this)
         val addresses = geocoder.getFromLocationName(address, 1)
@@ -259,21 +172,37 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
         if (addresses?.isNotEmpty() == true) {
             val location = LatLng(addresses[0].latitude, addresses[0].longitude)
 
-            mMap?.clear()
-            mMap?.addMarker(
-                MarkerOptions()
-                    .position(location)
-                    .title("Dirección buscada")
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
-            )
-            mMap!!.animateCamera(CameraUpdateFactory.newLatLngZoom(location, 15f))
+            if (bogotaBounds.contains(location)) {
+                mMap?.addMarker(
+                    MarkerOptions()
+                        .position(location)
+                        .title("Dirección buscada")
+                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+                )
+                mMap!!.animateCamera(CameraUpdateFactory.newLatLngZoom(location, 15f))
+            } else {
+                Toast.makeText(this, "Dirección fuera de Bogotá", Toast.LENGTH_SHORT).show()
+            }
         } else {
             Toast.makeText(this, "Dirección no encontrada", Toast.LENGTH_SHORT).show()
         }
     }
 
 
+    private fun drawStraightLine(startLatLng: LatLng, endLatLng: LatLng) {
+        // Elimina la línea anterior si existe
+        polyline?.remove()
 
+        // Crea una nueva línea recta con los puntos de inicio y fin
+        val polylineOptions = PolylineOptions()
+            .add(startLatLng)
+            .add(endLatLng)
+            .color(Color.BLUE)
+            .width(5f)
+
+        // Añade la línea al mapa
+        polyline = mMap?.addPolyline(polylineOptions)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -285,7 +214,6 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
         mLocationRequest = createLocationRequest()
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        checkLocationPermission()
         if (ActivityCompat.checkSelfPermission(
                 this,
                 android.Manifest.permission.ACCESS_FINE_LOCATION
@@ -303,6 +231,8 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
                             lastRecordedLocation = newLocation
                             saveLocationToJson(location.latitude, location.longitude)
                             updateLocationOnMap(location.latitude, location.longitude)
+                            var zoomI = LatLng(location.latitude, location.longitude)
+                            mMap!!.animateCamera(CameraUpdateFactory.newLatLngZoom(zoomI, currentZoomLevel))
                             val jsonContent = readJsonFile()
                             Log.i("JSON_CONTENT", "Contenido del archivo JSON: $jsonContent")
                         }
@@ -331,7 +261,21 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
 
                 }
             }
+            binding.texto.setOnEditorActionListener { v, actionId, _ ->
+                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                    val address = binding.texto.text.toString()
+                    if (address.isNotBlank()) {
+                        searchAddress(address)
 
+                        // Oculta el teclado después de presionar el botón de búsqueda
+                        val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                        inputMethodManager.hideSoftInputFromWindow(v.windowToken, 0)
+                    }
+                    true
+                } else {
+                    false
+                }
+            }
 
         }
 
@@ -355,6 +299,44 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
         mMap!!.uiSettings?.isZoomGesturesEnabled = true
         // Add a marker in Sydney and move the camera
         mMap!!.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.style_json))
+        mMap!!.setLatLngBoundsForCameraTarget(bogotaBounds)
+        val plazaBolivar = LatLng(4.647318, -74.058199)
+        val parqueNovios = LatLng(4.669249, -74.054816)
+        val cqVet = LatLng(4.635309, -74.064249)
+        val vetPC = LatLng(4.689831, -74.068760)
+
+        markersList.add(MarkerOptions().position(plazaBolivar).title("Parque de los hippies").snippet("Espacio abierto para pasear").alpha(0.5f))
+        markersList.add(MarkerOptions().position(parqueNovios).title("Parque de Los Novios").snippet("Espacio abierto para pasear").alpha(0.5f))
+        markersList.add(MarkerOptions().position(cqVet).title("Centro quirurgico veterinario").snippet("Centro especializado en el cuidado animal").alpha(0.5f))
+        markersList.add(MarkerOptions().position(vetPC).title("Veterinaria Pet Company").snippet("Veterinaria para la atención animal").alpha(0.5f))
+
+        markersList.forEach { markerOptions ->
+            mMap?.addMarker(markerOptions)?.tag = "routeMarker"
+        }
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            mMap!!.isMyLocationEnabled = true
+
+            mFusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                if (location != null) {
+                    val currentLocation = LatLng(location.latitude, location.longitude)
+                    mMap!!.moveCamera(CameraUpdateFactory.newLatLng(currentLocation))
+                    mMap!!.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, currentZoomLevel))
+                    mMap!!.setOnMarkerClickListener { marker ->
+                        val destinationLatLng = marker.position
+                        lastRecordedLocation?.let { currentLocation ->
+                            drawStraightLine(currentLocation, destinationLatLng)
+                        }
+                        false
+                    }
+
+
+                }
+            }
+        }
 
     }
 

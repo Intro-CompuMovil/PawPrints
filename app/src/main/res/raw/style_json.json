@@ -211,5 +211,12 @@
         "color": "#92998d"
       }
     ]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "labels",
+    "stylers": [
+      { "visibility": "off" }
+    ]
   }
 ]

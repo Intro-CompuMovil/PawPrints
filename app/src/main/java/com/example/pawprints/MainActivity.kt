@@ -149,7 +149,7 @@ class MainActivity : AppCompatActivity() {
                 if(!task.isSuccessful) {
                     Log.w(TAG, "signInWithEmail:failure", task.exception)
                     Toast.makeText(
-                        this, "Authentication failed. " + log,
+                        this, "Authentication failed. ",
                         Toast.LENGTH_SHORT
                     ).show()
                     binding.user.setText("")
