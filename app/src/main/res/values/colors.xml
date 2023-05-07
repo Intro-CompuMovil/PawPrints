@@ -7,9 +7,9 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="Main_brown">#6d3c11</color>
-    <color name="Menu_brown">#b88b5c</color>
-    <color name="Menu_option">#ffedba</color>
-    <color name="Arrow">#37251b</color>
+    <color name="Main_brown">#7d7d7d</color>
+    <color name="Menu_brown">#7d7d7d</color>
+    <color name="Menu_option">#101010</color>
+    <color name="Arrow">#ffffff</color>
     <color name="Crimson">#931323</color>
 </resources>
