@@ -29,4 +29,6 @@
     <string name="necesidad_permiso">Es necesasrio activar este permiso para acceder a la funcionalidad completa de la app</string>
     <string name="Participantes">Participantes</string>
     <string name="AnadirParticipante">Añadir participante</string>
+    <string name="correo">Correo</string>
+    <string name="logout">Salir</string>
 </resources>

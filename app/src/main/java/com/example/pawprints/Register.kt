@@ -31,14 +31,25 @@ import kotlinx.coroutines.withContext
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import android.provider.MediaStore
+import android.text.TextUtils
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ktx.database
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.StorageReference
 
 class Register : AppCompatActivity() {
 
 
+    private lateinit var auth: FirebaseAuth
+    private lateinit var database: DatabaseReference
+    private lateinit var storage: StorageReference
+
     private val img : ImageView by lazy {
         findViewById<ImageView>(R.id.profilePicReg)
     }
-
+    private val mydb = FirebaseDatabase.getInstance()
     private var tempImageUri: Uri? = null
     private var tempImageFilePath = ""
     private val albumLauncher = registerForActivityResult(ActivityResultContracts.GetContent()){
@@ -292,6 +303,106 @@ class Register : AppCompatActivity() {
         return File.createTempFile("temp-image", ".jpg", storageDir)
     }
 
+    private fun isEmailValid(email: String): Boolean {
+        if (!email.contains("@") ||
+            !email.contains(".") ||
+            email.length < 5){
+            return false
+        }
+        return true
+    }
+
+    private fun validateForm(): Boolean {
+        var valid = true
+        val email = findViewById<EditText>(R.id.CorreoReg)
+        if (TextUtils.isEmpty(email.text.toString())) {
+            valid = false
+        }
+        val password = findViewById<EditText>(R.id.passReg)
+        if (TextUtils.isEmpty(password.text.toString())) {
+            valid = false
+        }
+        return valid
+    }
+
+    private fun uploadImageAndSaveUserData(
+        correo: String, pass: String, nom: String,
+        owner: String, raza: String, photoUri: Uri?
+    ) {
+        val userId = auth.currentUser?.uid
+        if (userId != null && photoUri != null) {
+            val photoRef = storage.child("fotos_perfil/$userId.jpg")
+            photoRef.putFile(photoUri)
+                .addOnSuccessListener {
+                    photoRef.downloadUrl.addOnSuccessListener { downloadUrl ->
+                        saveUserData(correo, pass, nom, owner, raza, downloadUrl.toString())
+                    }
+                }
+                .addOnFailureListener {
+                    Toast.makeText(
+                        baseContext, "Error al guardar la foto de perfil.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+        } else {
+            saveUserData(correo, pass, nom, owner, raza, null)
+        }
+    }
+
+    private fun saveUserData(
+        correo: String, pass: String, nom: String,
+        owner: String, raza: String, photoUrl: String?
+    ) {
+        val userId = auth.currentUser!!.uid
+        database = Firebase.database.reference
+        if (userId != null) {
+            val user = User(
+                correo = correo,
+                password = pass,
+                nombre = nom,
+                raza = raza,
+                owner = owner,
+                foto = photoUrl
+            )
+            database = mydb.getReference("usuarios/"+userId)
+            database.setValue(user).addOnSuccessListener {
+                Toast.makeText(
+                    baseContext, "Cliente registrado y datos guardados.",
+                    Toast.LENGTH_SHORT
+                ).show()
+                val intentMenu = Intent(this, Menu::class.java)
+                startActivity(intentMenu)
+            }
+                .addOnFailureListener {
+                    Toast.makeText(
+                        baseContext, "Error al guardar los datos.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+//            database.child("usuarios").child(userId).setValue(user)
+//                .addOnSuccessListener {
+//                    Toast.makeText(
+//                        baseContext, "Cliente registrado y datos guardados.",
+//                        Toast.LENGTH_SHORT
+//                    ).show()
+//                    val intentMenu = Intent(this, Menu::class.java)
+//                    startActivity(intentMenu)
+//                }
+//                .addOnFailureListener {
+//                    Toast.makeText(
+//                        baseContext, "Error al guardar los datos.",
+//                        Toast.LENGTH_SHORT
+//                    ).show()
+//                }
+        } else {
+            Toast.makeText(
+                baseContext, "Error en el registro del cliente.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -302,7 +413,10 @@ class Register : AppCompatActivity() {
         val raza = findViewById<EditText>(R.id.raza)
         val owner = findViewById<EditText>(R.id.nomDueñoReg)
         val foto = findViewById<Button>(R.id.cambiarFoto)
+        val correo = findViewById<EditText>(R.id.CorreoReg)
+        val pass = findViewById<EditText>(R.id.passReg)
 
+        auth = FirebaseAuth.getInstance()
 
         foto.setOnClickListener{
             askImageMethod()
@@ -313,8 +427,24 @@ class Register : AppCompatActivity() {
             val nombre = nom.text.toString()
             val razareg = raza.text.toString()
             val ownerreg = owner.text.toString()
-            if(nombre != "" && razareg!="" && ownerreg!=""){
-                Toast.makeText(this,"Bienvenido a la familia, $nombre",Toast.LENGTH_LONG).show()
+            val correoReg = correo.text.toString()
+            val passreg = pass.text.toString()
+            if(nombre != "" && razareg!="" && ownerreg!="" && correoReg!="" && passreg != ""){
+                if(validateForm() && isEmailValid(correoReg)){
+                    auth.createUserWithEmailAndPassword(correoReg, passreg)
+                        .addOnCompleteListener(this) { task ->
+                            if (task.isSuccessful) {
+                                uploadImageAndSaveUserData(correoReg, passreg, nombre, ownerreg, razareg, tempImageUri)
+                            } else {
+                                Toast.makeText(
+                                    baseContext, "Error en el registro del cliente.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                }else{
+                    Toast.makeText(this, "Introduzca valores validos para el correo y contraseña", Toast.LENGTH_LONG).show()
+                }
             }else{
                 Toast.makeText(this,"Llene todos los valores de registro",Toast.LENGTH_LONG).show()
             }

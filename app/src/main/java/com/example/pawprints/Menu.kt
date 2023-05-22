@@ -10,6 +10,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import com.example.pawprints.MainActivity.Companion.ACCESS_FINE_LOCATION
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
 
 private fun changeToComsAct(cont: Context){
     val intent = Intent(cont, Communities::class.java)
@@ -29,13 +31,19 @@ private fun changeToMapsAct(cont: Context){
 
 
 class Menu : AppCompatActivity() {
+
+    private lateinit var auth: FirebaseAuth
+    private lateinit var database: FirebaseDatabase
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
         setContentView(R.layout.activity_menu)
+        auth = FirebaseAuth.getInstance()
+        database =FirebaseDatabase.getInstance()
         val comsbutton = findViewById<Button>(R.id.button_gocom)
         val profButton = findViewById<Button>(R.id.button_go_profile)
         val mapsButton = findViewById<Button>(R.id.button_gomap)
+        val logout = findViewById<Button>(R.id.logout)
         comsbutton.setOnClickListener{
             changeToComsAct(this)
         }
@@ -51,6 +59,11 @@ class Menu : AppCompatActivity() {
             ){
                 changeToMapsAct(this)
             }
+        }
+        logout.setOnClickListener{
+            auth.signOut()
+            val logIntent =Intent(this, MainActivity::class.java)
+            startActivity(logIntent)
         }
     }
 
