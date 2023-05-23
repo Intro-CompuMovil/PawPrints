@@ -2,78 +2,83 @@ package com.example.pawprints
 
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.hardware.Sensor
+import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.location.Criteria
 import android.location.Geocoder
-import android.location.LocationListener
-import android.location.LocationManager
+import android.location.Location
 import android.os.Bundle
-import android.view.MotionEvent
-import android.view.View
+import android.os.Looper
+import android.util.Log
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.preference.PreferenceManager
+import com.example.pawprints.MainActivity.Companion.ACCESS_FINE_LOCATION
 import com.example.pawprints.databinding.ActivityMapsBinding
-import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.*
+import com.example.pawprints.R
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.*
 import org.json.JSONArray
 import org.json.JSONObject
-import org.osmdroid.api.IMapController
-import org.osmdroid.config.Configuration
-import org.osmdroid.events.MapEventsReceiver
-import org.osmdroid.events.MapListener
-import org.osmdroid.events.ScrollEvent
-import org.osmdroid.events.ZoomEvent
-import org.osmdroid.gpkg.overlay.features.PolylineOptions
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.util.BoundingBox
-import org.osmdroid.util.GeoPoint
-import org.osmdroid.util.LocationUtils.getLastKnownLocation
-import org.osmdroid.views.MapController
-import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.MapEventsOverlay
-import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.Polyline
-import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
+import com.google.maps.DirectionsApi
+import com.google.maps.GeoApiContext
+import com.google.maps.model.DirectionsResult
+import com.google.maps.model.DirectionsRoute
+import com.google.android.gms.maps.model.Polyline
+import com.google.android.gms.maps.model.PolylineOptions
+import android.graphics.Color
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import kotlin.collections.ArrayList
 
+import com.google.maps.model.LatLng as ApiLatLng
 
-class Maps : AppCompatActivity(){
+class Maps : AppCompatActivity(), OnMapReadyCallback{
+    private var mMap: GoogleMap? = null
     private lateinit var binding: ActivityMapsBinding
     private lateinit var sensorManager: SensorManager
     private lateinit var lightSensor: Sensor
     private lateinit var lightSensorListener: SensorEventListener
 
-    private var mapView: MapView? = null
-    private var mapController: IMapController? = null
-    private var polyline= Polyline()
-    private var currentZoomLevel: Double = 18.0
-    private var lastRecordedLocation: GeoPoint? = null
+    private lateinit var mFusedLocationClient: FusedLocationProviderClient
+    private lateinit var mLocationRequest: LocationRequest
+    private lateinit var mLocationCallback: LocationCallback
+
+    private var longitud: Double? = null
+    private var latitud: Double? = null
+    private var polyline: Polyline? = null
+    private var currentZoomLevel: Float = 18F
+    private var lastRecordedLocation: LatLng? = null
     private val distanceThreshold = 30.0
     private var currentLocationMarker: Marker? = null
-    private val markersList = mutableListOf<Marker>()
+    private val markersList = mutableListOf<MarkerOptions>()
+    private val db = Firebase.firestore
+
+    val BOGOTA_NORTH_EAST = LatLng(4.826389, -74.014305)
+    val BOGOTA_SOUTH_WEST = LatLng(4.7756032, -74.9552260)
+    val bogotaBounds = LatLngBounds(BOGOTA_SOUTH_WEST, BOGOTA_NORTH_EAST)
 
 
-    private lateinit var mFusedLocationClient: FusedLocationProviderClient
-
-    val BOGOTA_NORTH_EAST = GeoPoint(4.826389, -74.014305)
-    val BOGOTA_SOUTH_WEST = GeoPoint(4.469611, -74.217694)
-    val bogotaBounds = org.osmdroid.util.BoundingBox(BOGOTA_NORTH_EAST.latitude, BOGOTA_NORTH_EAST.longitude, BOGOTA_SOUTH_WEST.latitude, BOGOTA_SOUTH_WEST.longitude)
-
-    private fun calculateDistanceInMeters(a: GeoPoint, b: GeoPoint): Double {
-        val locationA = android.location.Location("pointA").apply {
+    private fun calculateDistanceInMeters(a: LatLng, b: LatLng): Double {
+        val locationA = Location("pointA").apply {
             latitude = a.latitude
             longitude = a.longitude
         }
-        val locationB = android.location.Location("pointB").apply {
+        val locationB = Location("pointB").apply {
             latitude = b.latitude
             longitude = b.longitude
         }
@@ -102,39 +107,14 @@ class Maps : AppCompatActivity(){
         }
     }
 
-    private fun createLocationOverlay(mapView: MapView): MyLocationNewOverlay {
-        val locationOverlay = MyLocationNewOverlay(mapView)
-        locationOverlay.enableMyLocation()
-        locationOverlay.enableFollowLocation()
-        mapView.overlays.add(locationOverlay)
-        return locationOverlay
-    }
-
-
-    private fun createCriteria(): Criteria {
-        val criteria = Criteria()
-        criteria.accuracy = Criteria.ACCURACY_FINE // Prioridad alta de precisión
-        return criteria
-    }
-
-    private fun createLocationListener(): LocationListener {
-        return object : LocationListener {
-            override fun onLocationChanged(location: android.location.Location) {
-                // Manejar la ubicación actualizada aquí
-            }
-
-            override fun onProviderEnabled(provider: String) {
-                // Manejar cuando el proveedor de ubicación está habilitado
-            }
-
-            override fun onProviderDisabled(provider: String) {
-                // Manejar cuando el proveedor de ubicación está deshabilitado
-            }
-
-            override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {
-                // Manejar cambios de estado del proveedor de ubicación
-            }
+    private fun createLocationRequest(): LocationRequest {
+        val locationRequest = LocationRequest.create().apply {
+            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+            interval = 10000L
+            fastestInterval = 5000L
         }
+
+        return locationRequest
     }
 
     private fun startLocationUpdates() {
@@ -142,18 +122,9 @@ class Maps : AppCompatActivity(){
                 this, android.Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            val locationOverlay = mapView?.let { createLocationOverlay(it) }
-            if (locationOverlay != null) {
-                locationOverlay.runOnFirstFix {
-                    // Aquí puedes realizar acciones después de que se obtenga la primera ubicación
-                    // Por ejemplo, centrar el mapa en la ubicación del dispositivo
-                    val myLocation = locationOverlay.myLocation
-                    mapView?.controller?.animateTo(myLocation)
-                }
-            }
+            mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.getMainLooper())
         }
     }
-
 
     private fun readJsonFile(): String {
         val fileName = "locations.json"
@@ -169,24 +140,22 @@ class Maps : AppCompatActivity(){
 
 
     private fun updateLocationOnMap(latitude: Double, longitude: Double) {
-        val currentLocation = GeoPoint(latitude, longitude)
+        val currentLocation = LatLng(latitude, longitude)
         if (currentLocationMarker == null) {
-            currentLocationMarker = Marker(mapView)
-            currentLocationMarker?.position = currentLocation
-            currentLocationMarker?.title = "Ubicación actual"
-            currentLocationMarker?.icon =
-                resources.getDrawable(org.osmdroid.gpkg.R.drawable.marker_default)
-            mapView?.overlays?.add(currentLocationMarker)
+            currentLocationMarker = mMap?.addMarker(
+                MarkerOptions()
+                    .position(currentLocation)
+                    .title("Ubicación actual")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
+            )
         } else {
             currentLocationMarker?.position = currentLocation
         }
-        mapView?.overlays?.remove(polyline)
-        val mapController: MapController = mapView?.controller as MapController
-        mapController.animateTo(currentLocation)
-        currentZoomLevel = mapView!!.getZoomLevel(true)
-        mapController.setZoom(currentZoomLevel)
+        polyline?.remove()
+        mMap?.moveCamera(CameraUpdateFactory.newLatLng(currentLocation))
+        currentZoomLevel = mMap?.cameraPosition?.zoom ?: currentZoomLevel
+        mMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, currentZoomLevel))
     }
-
 
 
     private fun setMapStyleBasedOnLightLevel(lightLevel: Float) {
@@ -195,24 +164,7 @@ class Maps : AppCompatActivity(){
         } else {
             R.raw.style_json
         }
-        val mapController: MapController = mapView?.controller as MapController
-        mapController.setZoom(currentZoomLevel)
-        mapView!!.setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
-        mapView!!.setBuiltInZoomControls(true)
-        mapView!!.setMultiTouchControls(true)
-        mapView!!.setMapListener(object : MapListener {
-            override fun onScroll(event: ScrollEvent?): Boolean {
-                return false
-            }
-
-            override fun onZoom(event: ZoomEvent?): Boolean {
-                currentZoomLevel = event?.zoomLevel ?: currentZoomLevel
-                return false
-            }
-        })
-        mapView!!.setUseDataConnection(false)
-        //mapView!!.setMapStyleFile(resources.openRawResourceFd(styleId))
-        mapView!!.invalidate()
+        mMap?.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, styleId))
     }
 
 
@@ -222,18 +174,16 @@ class Maps : AppCompatActivity(){
         val addresses = geocoder.getFromLocationName(address, 1)
 
         if (addresses?.isNotEmpty() == true) {
-            val location = GeoPoint(addresses[0].latitude, addresses[0].longitude)
+            val location = LatLng(addresses[0].latitude, addresses[0].longitude)
 
             if (bogotaBounds.contains(location)) {
-                val marker = Marker(mapView)
-                marker.position = location
-                marker.title = "Dirección buscada"
-                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                marker.icon = resources.getDrawable(org.osmdroid.gpkg.R.drawable.marker_default)
-                mapView?.overlays?.add(marker)
-                mapView?.controller?.setCenter(location)
-                mapView?.controller?.setZoom(15)
-                mapView?.invalidate()
+                mMap?.addMarker(
+                    MarkerOptions()
+                        .position(location)
+                        .title("Dirección buscada")
+                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+                )
+                mMap!!.animateCamera(CameraUpdateFactory.newLatLngZoom(location, 15f))
             } else {
                 Toast.makeText(this, "Dirección fuera de Bogotá", Toast.LENGTH_SHORT).show()
             }
@@ -243,123 +193,114 @@ class Maps : AppCompatActivity(){
     }
 
 
-    private fun drawStraightLine(startLatLng: GeoPoint, endLatLng: GeoPoint) {
+    private fun drawStraightLine(startLatLng: LatLng, endLatLng: LatLng) {
         // Elimina la línea anterior si existe
-        mapView?.overlays?.remove(polyline)
+        polyline?.remove()
 
         // Crea una nueva línea recta con los puntos de inicio y fin
-        val polyline = Polyline()
-        polyline.addPoint(startLatLng)
-        polyline.addPoint(endLatLng)
-        polyline.color = Color.BLUE
-        polyline.width = 5f
+        val polylineOptions = PolylineOptions()
+            .add(startLatLng)
+            .add(endLatLng)
+            .color(Color.BLUE)
+            .width(5f)
 
         // Añade la línea al mapa
-        mapView?.overlays?.add(polyline)
-        mapView?.overlays?.add(polyline)
-        mapView?.invalidate()
+        polyline = mMap?.addPolyline(polylineOptions)
     }
 
+    private fun searchAddressVet(address: String, name: String) {
+        val geocoder = Geocoder(this)
+        val addresses = geocoder.getFromLocationName(address, 1, 4.5628072, -74.2279343, 4.7756032, -73.9552260)
+        Log.d("DEBUG", "Addresses for $name: $addresses")
+        if (addresses?.isNotEmpty() == true && addresses!=null) {
+            val location = LatLng(addresses[0].latitude, addresses[0].longitude)
+            mMap?.addMarker(
+                MarkerOptions()
+                    .position(location)
+                    .title(name)
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+            )
+        } else {
+            Toast.makeText(this, "Dirección no encontrada", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Configurar la ruta de almacenamiento para OSM
-        Configuration.getInstance().load(
-            applicationContext,
-            androidx.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        )
-
-        setContentView(R.layout.activity_maps)
-
-        mapView = findViewById(R.id.map)
-        mapView?.setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
-        mapView?.setMultiTouchControls(true)
-        mapView?.setBuiltInZoomControls(true)
-
-
-        // Configurar el overlay de ubicación
-        var locationOverlay = MyLocationNewOverlay(mapView)
-        locationOverlay.enableMyLocation()
-        locationOverlay.enableFollowLocation()
-        mapView?.overlays?.add(locationOverlay)
-
-        // Configurar el controlador del mapa
-        val mapController = mapView?.controller
-        val mapEventsReceiver = MapEventsReceiverImpl()
-
-
-        // Configurar el receptor de eventos del mapa
-        mapView?.overlays?.add(MapEventsOverlay(mapEventsReceiver))
-
-        // Configurar el marcador
-        val marker = Marker(mapView)
-        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        mapView?.overlays?.add(marker)
-
-        // Configurar la escucha de eventos de zoom y desplazamiento del mapa
-        mapView?.setMapListener(object : MapListener {
-            override fun onScroll(event: ScrollEvent?): Boolean {
-                return false
-            }
-
-            override fun onZoom(event: ZoomEvent?): Boolean {
-                currentZoomLevel = event?.zoomLevel?.toDouble() ?: currentZoomLevel
-                return false
-            }
-        })
-
-        // Configurar el sensor de luz
-        /*
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
-        lightSensorListener = object : SensorEventListener {
-            override fun onSensorChanged(event: SensorEvent) {
-                val light = event.values[0]
-                if (mapView != null) {
-                    if (light < 10) {
-                        // Cargar estilo oscuro
-                        mapView.setMapStyle(this@MapsActivity, R.raw.style_dark)
-                    } else {
-                        // Cargar estilo predeterminado
-                        mapView.setMapStyle(this@MapsActivity, R.raw.style_json)
+        binding = ActivityMapsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        mLocationRequest = createLocationRequest()
+
+        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ){
+            mLocationCallback = object : LocationCallback() {
+                override fun onLocationResult(locationResult: LocationResult) {
+                    super.onLocationResult(locationResult)
+                    val location = locationResult.lastLocation
+                    Log.i("LOCATION", "Location update in the callback: $location")
+                    if (location != null) {
+                        val newLocation = LatLng(location.latitude, location.longitude)
+                        if(lastRecordedLocation==null || calculateDistanceInMeters(
+                                lastRecordedLocation!!, newLocation) >= distanceThreshold){
+                            lastRecordedLocation = newLocation
+                            saveLocationToJson(location.latitude, location.longitude)
+                            updateLocationOnMap(location.latitude, location.longitude)
+                            var zoomI = LatLng(location.latitude, location.longitude)
+                            mMap!!.animateCamera(CameraUpdateFactory.newLatLngZoom(zoomI, currentZoomLevel))
+                            val jsonContent = readJsonFile()
+                            Log.i("JSON_CONTENT", "Contenido del archivo JSON: $jsonContent")
+                        }
                     }
                 }
             }
+            LocationServices.getFusedLocationProviderClient(this).requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper())
+            val mapFragment = supportFragmentManager
+                .findFragmentById(R.id.map) as SupportMapFragment
+            mapFragment.getMapAsync(this)
 
-            override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
+            startLocationUpdates()
+            lightSensorListener = object : SensorEventListener {
+                override fun onSensorChanged(event: SensorEvent) {
+                    val light = event.values[0]
+                    if (mMap != null) {
+                        if (light < 10) {
+                            mMap!!.setMapStyle(MapStyleOptions.loadRawResourceStyle(this@Maps, R.raw.style_dark))
+                        } else {
+                            mMap!!.setMapStyle(MapStyleOptions.loadRawResourceStyle(this@Maps, R.raw.style_json))
+                        }
+                    }
+                }
+
+                override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
+
+                }
             }
-        }*/
+            binding.texto.setOnEditorActionListener { v, actionId, _ ->
+                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                    val address = binding.texto.text.toString()
+                    if (address.isNotBlank()) {
+                        searchAddress(address)
 
-        // Solicitar permisos de ubicación si no están otorgados
-        if (ActivityCompat.checkSelfPermission(
-                this, android.Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            val LOCATION_PERMISSION_REQUEST_CODE = 0
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
-                LOCATION_PERMISSION_REQUEST_CODE
-            )
+                        // Oculta el teclado después de presionar el botón de búsqueda
+                        val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                        inputMethodManager.hideSoftInputFromWindow(v.windowToken, 0)
+                    }
+                    true
+                } else {
+                    false
+                }
+            }
+
         }
 
-        // Obtener la ubicación actual y centrar el mapa en ella
-        if (ActivityCompat.checkSelfPermission(
-                this, android.Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            // Obtener la última ubicación conocida
-            val lastLocation = locationOverlay.myLocation
-            if (lastLocation != null) {
-                val zoomGeoPoint = GeoPoint(lastLocation.latitude, lastLocation.longitude)
-                mapController?.setZoom(currentZoomLevel.toInt())
-                mapController?.setCenter(zoomGeoPoint)
-                marker.position = zoomGeoPoint
-            }
-        }
     }
-
 
     override fun onResume() {
         super.onResume()
@@ -372,42 +313,57 @@ class Maps : AppCompatActivity(){
     }
 
 
-    override fun onMapReady(mapView: MapView) {
-        mapController = mapView.controller
+    override fun onMapReady(googleMap: GoogleMap) {
+        mMap = googleMap
+        mMap!!.uiSettings.isScrollGesturesEnabledDuringRotateOrZoom = true
+        mMap!!.uiSettings?.isZoomControlsEnabled = true
+        mMap!!.uiSettings?.isZoomGesturesEnabled = true
+        mMap!!.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.style_json))
+        //mMap!!.setLatLngBoundsForCameraTarget(bogotaBounds)
+        val geocoder = Geocoder(this)
+        val plazaBolivar = LatLng(4.647318, -74.058199)
+        val parqueNovios = LatLng(4.669249, -74.054816)
+        val cqVet = LatLng(4.635309, -74.064249)
+        val vetPC = LatLng(4.689831, -74.068760)
+        val list: MutableList<Vet> = ArrayList()
+        val mQuery = db.collection("vets")
+        mQuery.get().addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                for (document in task.result!!) {
+                    val vet = Vet(
+                        email = document.get("email") as? String ?: "",
+                        location = document.get("location") as? String ?: "",
+                        name_vet = document.get("name_vet") as? String ?: ""
+                    )
+                    list.add(vet)
+                    Log.i("VET", "Contenido de VET: ${vet.name_vet} + ${vet.location}")
 
+                    val addresses = geocoder.getFromLocationName(vet.location, 1, 4.5628072, -74.2279343, 4.7756032, -73.9552260)
+                    Log.d("DEBUG", "Addresses for ${vet.name_vet}: $addresses")
+                    if (addresses?.isNotEmpty() == true && addresses!=null) {
+                        val location = LatLng(addresses[0].latitude, addresses[0].longitude)
+                        markersList.add(
+                            MarkerOptions()
+                                .position(location)
+                                .title(vet.name_vet)
+                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+                                .alpha(0.5f)
+                        )
+                    } else {
+                        Toast.makeText(this, "Dirección no encontrada", Toast.LENGTH_SHORT).show()
+                    }
+                }
 
-        val plazaBolivar = GeoPoint(4.647318, -74.058199)
-        val parqueNovios = GeoPoint(4.669249, -74.054816)
-        val cqVet = GeoPoint(4.635309, -74.064249)
-        val vetPC = GeoPoint(4.689831, -74.068760)
+                // Ahora que todos los marcadores de Firestore han sido agregados a la lista, agrega los marcadores estáticos y luego a todos ellos al mapa
+                markersList.add(MarkerOptions().position(plazaBolivar).title("Parque de los hippies").snippet("Espacio abierto para pasear").alpha(0.5f))
+                markersList.add(MarkerOptions().position(parqueNovios).title("Parque de Los Novios").snippet("Espacio abierto para pasear").alpha(0.5f))
+                markersList.add(MarkerOptions().position(cqVet).title("Centro quirurgico veterinario").snippet("Centro especializado en el cuidado animal").alpha(0.5f))
+                markersList.add(MarkerOptions().position(vetPC).title("Veterinaria Pet Company").snippet("Veterinaria para la atención animal").alpha(0.5f))
 
-        markersList.add(Marker(mapView).apply {
-            position = plazaBolivar
-            title = "Parque de los hippies"
-            snippet = "Espacio abierto para pasear"
-            alpha = 0.5f
-        })
-        markersList.add(Marker(mapView).apply {
-            position = parqueNovios
-            title = "Parque de Los Novios"
-            snippet = "Espacio abierto para pasear"
-            alpha = 0.5f
-        })
-        markersList.add(Marker(mapView).apply {
-            position = cqVet
-            title = "Centro quirurgico veterinario"
-            snippet = "Centro especializado en el cuidado animal"
-            alpha = 0.5f
-        })
-        markersList.add(Marker(mapView).apply {
-            position = vetPC
-            title = "Veterinaria Pet Company"
-            snippet = "Veterinaria para la atención animal"
-            alpha = 0.5f
-        })
-
-        markersList.forEach { marker ->
-            mapView.overlays.add(marker)
+                markersList.forEach { markerOptions ->
+                    mMap?.addMarker(markerOptions)?.tag = "routeMarker"
+                }
+            }
         }
 
         if (ActivityCompat.checkSelfPermission(
@@ -415,58 +371,26 @@ class Maps : AppCompatActivity(){
                 android.Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            mapView.isEnabled = true
+            mMap!!.isMyLocationEnabled = true
 
-
-            /*mFusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
+            mFusedLocationClient.lastLocation.addOnSuccessListener { location ->
                 if (location != null) {
-                    val currentLocation = GeoPoint(location.latitude, location.longitude)
-
-                    mapController?.setCenter(currentLocation)
-                    mapView.invalidate()
-
-                    mapView.setOnClickListener(View.OnClickListener { view ->
-                        val clickedPoint = mapView.projection.fromPixels(
-                            view.x.toInt(), view.y.toInt()
-                        )
-                        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-                        val currentLocation = getLastKnownLocation(locationManager)
-
-                        if (currentLocation != null) {
-                            val currentLatLng = GeoPoint(
-                                currentLocation.latitude,
-                                currentLocation.longitude
-                            )
-                            drawLine(currentLatLng, clickedPoint as GeoPoint)
+                    val currentLocation = LatLng(location.latitude, location.longitude)
+                    mMap!!.moveCamera(CameraUpdateFactory.newLatLng(currentLocation))
+                    mMap!!.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, currentZoomLevel))
+                    mMap!!.setOnMarkerClickListener { marker ->
+                        val destinationLatLng = marker.position
+                        lastRecordedLocation?.let { currentLocation ->
+                            drawStraightLine(currentLocation, destinationLatLng)
                         }
-                    })
+                        false
+                    }
+
+
                 }
-            }*/
-        }
-    }
-
-    private fun drawLine(startPoint: GeoPoint, endPoint: GeoPoint) {
-        val polyline = Polyline(mapView)
-        polyline.setColor(Color.BLUE)
-        polyline.width = 5f
-        polyline.addPoint(startPoint)
-        polyline.addPoint(endPoint)
-        mapView?.overlayManager?.add(polyline)
-        mapView?.invalidate()
-    }
-
-
-
-    class MapEventsReceiverImpl : MapEventsReceiver {
-        override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
-            // Manejar el evento de toque único en el mapa
-            return true
+            }
         }
 
-        override fun longPressHelper(p: GeoPoint?): Boolean {
-            // Manejar el evento de pulsación larga en el mapa
-            return true
-        }
     }
 
 }

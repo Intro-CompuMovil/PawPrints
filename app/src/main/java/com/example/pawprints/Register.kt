@@ -333,16 +333,22 @@ class Register : AppCompatActivity() {
         if (userId != null && photoUri != null) {
             val photoRef = storage.child("fotos_perfil/$userId.jpg")
             photoRef.putFile(photoUri)
-                .addOnSuccessListener {
-                    photoRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-                        saveUserData(correo, pass, nom, owner, raza, downloadUrl.toString())
+                .continueWithTask { task ->
+                    if (!task.isSuccessful) {
+                        task.exception?.let { throw it }
                     }
+                    photoRef.downloadUrl
                 }
-                .addOnFailureListener {
-                    Toast.makeText(
-                        baseContext, "Error al guardar la foto de perfil.",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        val downloadUrl = task.result
+                        saveUserData(correo, pass, nom, owner, raza, downloadUrl.toString())
+                    } else {
+                        Toast.makeText(
+                            baseContext, "Error al guardar la foto de perfil.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
         } else {
             saveUserData(correo, pass, nom, owner, raza, null)

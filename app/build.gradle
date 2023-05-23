@@ -37,7 +37,7 @@ android {
         jvmTarget = '1.8'
     }
 
-    
+
 }
 
 dependencies {
@@ -53,7 +53,6 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.12.0'
     implementation 'com.google.firebase:firebase-database-ktx:20.2.1'
     implementation 'com.google.firebase:firebase-storage-ktx:20.2.0'
-    implementation 'androidx.preference:preference-ktx:1.1.1'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.12.0'
     testImplementation 'junit:junit:4.13.2'
     implementation 'com.google.maps:google-maps-services:0.16.1'
@@ -61,14 +60,10 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     // Import the BoM for the Firebase platform
     implementation platform('com.google.firebase:firebase-bom:31.2.3')
-    implementation 'org.osmdroid:osmdroid-android:6.1.14'
-    implementation 'org.osmdroid:osmdroid-geopackage:6.1.14' // Optional: if you need support for GeoPackage files
-    implementation 'org.osmdroid:osmdroid-mapsforge:6.1.14'
-    implementation 'org.osmdroid:osmdroid-third-party:6.1.11'
 // Add the dependency for the Firebase Authentication library
 // When using the BoM, you don't specify versions in Firebase library dependencies
     implementation 'com.google.firebase:firebase-auth-ktx'
-    //implementation 'com.google.firebase:firebase-firestore-ktx'
+    implementation 'com.google.firebase:firebase-firestore-ktx:24.6.0'
 
 
 }
