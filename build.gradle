@@ -7,6 +7,9 @@ buildscript {
     dependencies {
 // Add the dependency for the Google services Gradle plugin
         classpath 'com.google.gms:google-services:4.3.15'
+        implementation 'org.osmdroid:osmdroid-android:6.1.14'
+        implementation 'org.osmdroid:osmdroid-geopackage:6.1.14' // Optional: if you need support for GeoPackage files
+        implementation 'org.osmdroid:osmdroid-mapsforge:6.1.14'
     }
 }
 // Top-level build file where you can add configuration options common to all sub-projects/modules.

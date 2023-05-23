@@ -7,7 +7,6 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.Geocoder
-import android.location.Location
 import android.os.Bundle
 import android.os.Looper
 import android.util.Log
@@ -17,13 +16,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.example.pawprints.MainActivity.Companion.ACCESS_FINE_LOCATION
 import com.example.pawprints.databinding.ActivityMapsBinding
-import com.google.android.gms.location.*
 import com.example.pawprints.R
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.*
+import org.osmdroid.views.MapView
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -32,49 +26,50 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
-import com.google.maps.DirectionsApi
-import com.google.maps.GeoApiContext
-import com.google.maps.model.DirectionsResult
-import com.google.maps.model.DirectionsRoute
-import com.google.android.gms.maps.model.Polyline
-import com.google.android.gms.maps.model.PolylineOptions
 import android.graphics.Color
+import android.location.Criteria
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
+import org.osmdroid.api.IMapController
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util
 
-import com.google.maps.model.LatLng as ApiLatLng
 
-class Maps : AppCompatActivity(), OnMapReadyCallback{
-    private var mMap: GoogleMap? = null
+
+
+class Maps : AppCompatActivity(), MapEventsReceiver{
     private lateinit var binding: ActivityMapsBinding
     private lateinit var sensorManager: SensorManager
     private lateinit var lightSensor: Sensor
     private lateinit var lightSensorListener: SensorEventListener
 
+    private var mapView: MapView? = null
+    private var mapController: IMapController? = null
+    private var polyline: Polyline? = null
+    private var currentZoomLevel: Double = 18.0
+    private var lastRecordedLocation: GeoPoint? = null
+    private val distanceThreshold = 30.0
+    private var currentLocationMarker: Marker? = null
+    private val markersList = mutableListOf<Marker>()
+
     private lateinit var mFusedLocationClient: FusedLocationProviderClient
     private lateinit var mLocationRequest: LocationRequest
     private lateinit var mLocationCallback: LocationCallback
 
-    private var longitud: Double? = null
-    private var latitud: Double? = null
-    private var polyline: Polyline? = null
-    private var currentZoomLevel: Float = 18F
-    private var lastRecordedLocation: LatLng? = null
-    private val distanceThreshold = 30.0
-    private var currentLocationMarker: Marker? = null
-    private val markersList = mutableListOf<MarkerOptions>()
-
     val BOGOTA_NORTH_EAST = LatLng(4.826389, -74.014305)
     val BOGOTA_SOUTH_WEST = LatLng(4.469611, -74.217694)
-    val bogotaBounds = LatLngBounds(BOGOTA_SOUTH_WEST, BOGOTA_NORTH_EAST)
+    val bogotaBounds = org.osmdroid.util.BoundingBox(BOGOTA_NORTH_EAST.latitude, BOGOTA_NORTH_EAST.longitude, BOGOTA_SOUTH_WEST.latitude, BOGOTA_SOUTH_WEST.longitude)
 
-
-    private fun calculateDistanceInMeters(a: LatLng, b: LatLng): Double {
-        val locationA = Location("pointA").apply {
+    private fun calculateDistanceInMeters(a: GeoPoint, b: GeoPoint): Double {
+        val locationA = android.location.Location("pointA").apply {
             latitude = a.latitude
             longitude = a.longitude
         }
-        val locationB = Location("pointB").apply {
+        val locationB = android.location.Location("pointB").apply {
             latitude = b.latitude
             longitude = b.longitude
         }
@@ -103,12 +98,17 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
         }
     }
 
-    private fun createLocationRequest(): LocationRequest {
-        val locationRequest = LocationRequest.create().apply {
-            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-            interval = 10000L
-            fastestInterval = 5000L
-        }
+    private fun createLocationRequest(): GeoPoint {
+        val locationRequest = GeoPoint(0.0, 0.0);
+        // Configurar los parámetros de la solicitud de ubicación
+        val priority = Criteria.ACCURACY_FINE // Prioridad alta de precisión
+        val interval = 10000L // Intervalo de actualización de ubicación en milisegundos
+        val fastestInterval = 5000L // Intervalo más rápido de actualización de ubicación en milisegundos
+
+        // Actualizar los valores de la solicitud de ubicación
+        locationRequest.setAccuracy(priority)
+        locationRequest.setInterval(interval)
+        locationRequest.setFastestInterval(fastestInterval)
 
         return locationRequest
     }
@@ -136,21 +136,21 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
 
 
     private fun updateLocationOnMap(latitude: Double, longitude: Double) {
-        val currentLocation = LatLng(latitude, longitude)
+        val currentLocation = GeoPoint(latitude, longitude)
         if (currentLocationMarker == null) {
-            currentLocationMarker = mMap?.addMarker(
-                MarkerOptions()
-                    .position(currentLocation)
-                    .title("Ubicación actual")
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
-            )
+            currentLocationMarker = Marker(mapView)
+            currentLocationMarker?.position = currentLocation
+            currentLocationMarker?.title = "Ubicación actual"
+            currentLocationMarker?.icon = resources.getDrawable(R.drawable.marker_blue)
+            mapView.overlays.add(currentLocationMarker)
         } else {
             currentLocationMarker?.position = currentLocation
         }
         polyline?.remove()
-        mMap?.moveCamera(CameraUpdateFactory.newLatLng(currentLocation))
-        currentZoomLevel = mMap?.cameraPosition?.zoom ?: currentZoomLevel
-        mMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, currentZoomLevel))
+        val mapController: MapController = mapView.controller
+        mapController.animateTo(currentLocation)
+        currentZoomLevel = mapController.zoomLevelDouble
+        mapController.setZoom(currentZoomLevel)
     }
 
 
@@ -160,7 +160,24 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
         } else {
             R.raw.style_json
         }
-        mMap?.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, styleId))
+        val mapController: MapController = mapView.controller
+        mapController.setZoom(currentZoomLevel)
+        mapView.setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
+        mapView.setBuiltInZoomControls(true)
+        mapView.setMultiTouchControls(true)
+        mapView.setMapListener(object : MapListener {
+            override fun onScroll(event: ScrollEvent?): Boolean {
+                return false
+            }
+
+            override fun onZoom(event: ZoomEvent?): Boolean {
+                currentZoomLevel = event?.zoomLevel ?: currentZoomLevel
+                return false
+            }
+        })
+        mapView.setUseDataConnection(false)
+        mapView.setMapStyleFile(resources.openRawResourceFd(styleId))
+        mapView.invalidate()
     }
 
 
@@ -170,16 +187,18 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
         val addresses = geocoder.getFromLocationName(address, 1)
 
         if (addresses?.isNotEmpty() == true) {
-            val location = LatLng(addresses[0].latitude, addresses[0].longitude)
+            val location = GeoPoint(addresses[0].latitude, addresses[0].longitude)
 
             if (bogotaBounds.contains(location)) {
-                mMap?.addMarker(
-                    MarkerOptions()
-                        .position(location)
-                        .title("Dirección buscada")
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
-                )
-                mMap!!.animateCamera(CameraUpdateFactory.newLatLngZoom(location, 15f))
+                val marker = Marker(mapView)
+                marker.position = location
+                marker.title = "Dirección buscada"
+                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                marker.icon = resources.getDrawable(R.drawable.marker_icon)
+                mapView.overlays.add(marker)
+                mapView.controller.setCenter(location)
+                mapView.controller.setZoom(15)
+                mapView.invalidate()
             } else {
                 Toast.makeText(this, "Dirección fuera de Bogotá", Toast.LENGTH_SHORT).show()
             }
@@ -189,7 +208,7 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
     }
 
 
-    private fun drawStraightLine(startLatLng: LatLng, endLatLng: LatLng) {
+    private fun drawStraightLine(startLatLng: GeoPoint, endLatLng: GeoPoint) {
         // Elimina la línea anterior si existe
         polyline?.remove()
 
@@ -201,8 +220,12 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
             .width(5f)
 
         // Añade la línea al mapa
-        polyline = mMap?.addPolyline(polylineOptions)
+        polyline = Polyline(mapView)
+        polyline?.applyOptions(polylineOptions)
+        mapView.overlays.add(polyline)
+        mapView.invalidate()
     }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -213,46 +236,61 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
         setContentView(binding.root)
         mLocationRequest = createLocationRequest()
 
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        // Obtain the MapView from the layout
+        mapView = findViewById(R.id.map)
+        mapView.setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
+        mapView.setBuiltInZoomControls(true)
+        mapView.setMultiTouchControls(true)
+
+        // Obtain the MapController
+        mapController = mapView.controller
+
         if (ActivityCompat.checkSelfPermission(
                 this,
                 android.Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
-        ){
+        ) {
             mLocationCallback = object : LocationCallback() {
                 override fun onLocationResult(locationResult: LocationResult) {
                     super.onLocationResult(locationResult)
                     val location = locationResult.lastLocation
                     Log.i("LOCATION", "Location update in the callback: $location")
                     if (location != null) {
-                        val newLocation = LatLng(location.latitude, location.longitude)
-                        if(lastRecordedLocation==null || calculateDistanceInMeters(
-                                lastRecordedLocation!!, newLocation) >= distanceThreshold){
+                        val newLocation = GeoPoint(location.latitude, location.longitude)
+                        if (lastRecordedLocation == null || calculateDistanceInMeters(
+                                lastRecordedLocation!!, newLocation
+                            ) >= distanceThreshold
+                        ) {
                             lastRecordedLocation = newLocation
                             saveLocationToJson(location.latitude, location.longitude)
                             updateLocationOnMap(location.latitude, location.longitude)
                             var zoomI = LatLng(location.latitude, location.longitude)
-                            mMap!!.animateCamera(CameraUpdateFactory.newLatLngZoom(zoomI, currentZoomLevel))
+                            mapController.animateTo(zoomI)
                             val jsonContent = readJsonFile()
                             Log.i("JSON_CONTENT", "Contenido del archivo JSON: $jsonContent")
                         }
                     }
                 }
             }
-            LocationServices.getFusedLocationProviderClient(this).requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper())
-            val mapFragment = supportFragmentManager
-                .findFragmentById(R.id.map) as SupportMapFragment
-            mapFragment.getMapAsync(this)
+            LocationServices.getFusedLocationProviderClient(this)
+                .requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper())
+            mapView.onResume()
+            mapView.postDelayed({
+                mapController.animateTo(mapView.mapCenter)
+                mapController.setZoom(currentZoomLevel.toInt())
+            }, 1000)
 
             startLocationUpdates()
             lightSensorListener = object : SensorEventListener {
                 override fun onSensorChanged(event: SensorEvent) {
                     val light = event.values[0]
-                    if (mMap != null) {
+                    if (mapView != null) {
                         if (light < 10) {
-                            mMap!!.setMapStyle(MapStyleOptions.loadRawResourceStyle(this@Maps, R.raw.style_dark))
+                            // Load dark style
+                            mapView.setMapStyle(this@Maps, R.raw.style_dark)
                         } else {
-                            mMap!!.setMapStyle(MapStyleOptions.loadRawResourceStyle(this@Maps, R.raw.style_json))
+                            // Load default style
+                            mapView.setMapStyle(this@Maps, R.raw.style_json)
                         }
                     }
                 }
@@ -267,8 +305,9 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
                     if (address.isNotBlank()) {
                         searchAddress(address)
 
-                        // Oculta el teclado después de presionar el botón de búsqueda
-                        val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                        // Hide the keyboard after pressing the search button
+                        val inputMethodManager =
+                            getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                         inputMethodManager.hideSoftInputFromWindow(v.windowToken, 0)
                     }
                     true
@@ -276,10 +315,9 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
                     false
                 }
             }
-
         }
-
     }
+
 
     override fun onResume() {
         super.onResume()
@@ -292,52 +330,68 @@ class Maps : AppCompatActivity(), OnMapReadyCallback{
     }
 
 
-    override fun onMapReady(googleMap: GoogleMap) {
-        mMap = googleMap
-        mMap!!.uiSettings.isScrollGesturesEnabledDuringRotateOrZoom = true
-        mMap!!.uiSettings?.isZoomControlsEnabled = true
-        mMap!!.uiSettings?.isZoomGesturesEnabled = true
-        // Add a marker in Sydney and move the camera
-        mMap!!.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.style_json))
-        mMap!!.setLatLngBoundsForCameraTarget(bogotaBounds)
-        val plazaBolivar = LatLng(4.647318, -74.058199)
-        val parqueNovios = LatLng(4.669249, -74.054816)
-        val cqVet = LatLng(4.635309, -74.064249)
-        val vetPC = LatLng(4.689831, -74.068760)
+    override fun onMapReady(mapView: MapView) {
+        mMap = mapView.controller
+        mMap.setZoom(15.0)
 
-        markersList.add(MarkerOptions().position(plazaBolivar).title("Parque de los hippies").snippet("Espacio abierto para pasear").alpha(0.5f))
-        markersList.add(MarkerOptions().position(parqueNovios).title("Parque de Los Novios").snippet("Espacio abierto para pasear").alpha(0.5f))
-        markersList.add(MarkerOptions().position(cqVet).title("Centro quirurgico veterinario").snippet("Centro especializado en el cuidado animal").alpha(0.5f))
-        markersList.add(MarkerOptions().position(vetPC).title("Veterinaria Pet Company").snippet("Veterinaria para la atención animal").alpha(0.5f))
+        val plazaBolivar = GeoPoint(4.647318, -74.058199)
+        val parqueNovios = GeoPoint(4.669249, -74.054816)
+        val cqVet = GeoPoint(4.635309, -74.064249)
+        val vetPC = GeoPoint(4.689831, -74.068760)
 
-        markersList.forEach { markerOptions ->
-            mMap?.addMarker(markerOptions)?.tag = "routeMarker"
+        markersList.add(Marker(mapView).apply {
+            position = plazaBolivar
+            title = "Parque de los hippies"
+            snippet = "Espacio abierto para pasear"
+            alpha = 0.5f
+        })
+        markersList.add(Marker(mapView).apply {
+            position = parqueNovios
+            title = "Parque de Los Novios"
+            snippet = "Espacio abierto para pasear"
+            alpha = 0.5f
+        })
+        markersList.add(Marker(mapView).apply {
+            position = cqVet
+            title = "Centro quirurgico veterinario"
+            snippet = "Centro especializado en el cuidado animal"
+            alpha = 0.5f
+        })
+        markersList.add(Marker(mapView).apply {
+            position = vetPC
+            title = "Veterinaria Pet Company"
+            snippet = "Veterinaria para la atención animal"
+            alpha = 0.5f
+        })
+
+        markersList.forEach { marker ->
+            mapView.overlays.add(marker)
         }
+
         if (ActivityCompat.checkSelfPermission(
                 this,
                 android.Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            mMap!!.isMyLocationEnabled = true
+            mapView.isMyLocationEnabled = true
 
             mFusedLocationClient.lastLocation.addOnSuccessListener { location ->
                 if (location != null) {
-                    val currentLocation = LatLng(location.latitude, location.longitude)
-                    mMap!!.moveCamera(CameraUpdateFactory.newLatLng(currentLocation))
-                    mMap!!.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, currentZoomLevel))
-                    mMap!!.setOnMarkerClickListener { marker ->
+                    val currentLocation = GeoPoint(location.latitude, location.longitude)
+                    mMap.setCenter(currentLocation)
+                    mMap.animateTo(currentLocation)
+                    mMap.setOnMarkerClickListener { marker, mapView ->
                         val destinationLatLng = marker.position
                         lastRecordedLocation?.let { currentLocation ->
                             drawStraightLine(currentLocation, destinationLatLng)
                         }
                         false
                     }
-
-
                 }
             }
         }
-
     }
+
+
 
 }
